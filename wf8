@@ -1,0 +1,422 @@
+
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  NavLink,
+  Outlet,
+  useParams,
+  useNavigate,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import "./App.css";
+
+// Global theme context
+const ThemeContext = createContext();
+
+function ThemeProvider({ children }) {
+  const [dark, setDark] = useState(false);
+
+  return (
+    <ThemeContext.Provider
+      value={{ dark, toggleTheme: () => setDark((prev) => !prev) }}
+    >
+      <div className={dark ? "app dark" : "app light"}>
+        {children}
+      </div>
+    </ThemeContext.Provider>
+  );
+}
+
+function Navbar() {
+  const { dark, toggleTheme } = useContext(ThemeContext);
+
+  return (
+    <nav className="navbar">
+      <h2>Router Demo</h2>
+
+      <div className="nav-links">
+        <NavLink to="/" end className={({ isActive }) =>
+          isActive ? "active" : ""
+        }>
+          Home
+        </NavLink>
+
+        <NavLink to="/about" className={({ isActive }) =>
+          isActive ? "active" : ""
+        }>
+          About
+        </NavLink>
+
+        <NavLink to="/dashboard" className={({ isActive }) =>
+          isActive ? "active" : ""
+        }>
+          Dashboard
+        </NavLink>
+
+        <NavLink to="/user/1" className={({ isActive }) =>
+          isActive ? "active" : ""
+        }>
+          User Profile
+        </NavLink>
+      </div>
+
+      <button onClick={toggleTheme}>
+        {dark ? "Light Mode" : "Dark Mode"}
+      </button>
+    </nav>
+  );
+}
+
+// Home page
+function Home() {
+  const navigate = useNavigate();
+
+  return (
+    <section className="card">
+      <h1>Home Page</h1>
+      <p>Welcome to the React Router application!</p>
+      <button onClick={() => navigate("/user/1")}>
+        View User Profile
+      </button>
+    </section>
+  );
+}
+
+// About page: ticking clock
+function About() {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <section className="card">
+      <h1>About Page</h1>
+      <p>This page demonstrates useEffect and screen updates.</p>
+      <h3>Current Time</h3>
+      <p className="clock">{time.toLocaleTimeString()}</p>
+    </section>
+  );
+}
+
+// Nested Dashboard page
+function DashboardLayout() {
+  return (
+    <section className="card">
+      <h1>Dashboard</h1>
+      <p>Manage your dashboard here.</p>
+
+      <div className="subnav">
+        <NavLink to="/dashboard" end>
+          Counter
+        </NavLink>
+        <NavLink to="/dashboard/reports">
+          Reports
+        </NavLink>
+      </div>
+
+      <Outlet />
+    </section>
+  );
+}
+
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <h2>Counter: {count}</h2>
+      <button onClick={() => setCount((c) => c + 1)}>
+        Increment
+      </button>{" "}
+      <button onClick={() => setCount((c) => c - 1)}>
+        Decrement
+      </button>
+      <button onClick={() => setCount(0)}>Reset</button>
+    </div>
+  );
+}
+
+function Reports() {
+  return (
+    <div>
+      <h2>Dashboard Reports</h2>
+      <p>This is a nested route inside the Dashboard.</p>
+    </div>
+  );
+}
+
+// Dynamic user profile
+const users = {
+  1: {
+    name: "John Doe",
+    email: "john@example.com",
+    role: "Admin",
+  },
+  2: {
+    name: "Jane Smith",
+    email: "jane@example.com",
+    role: "User",
+  },
+};
+
+function UserProfile() {
+  const { userId } = useParams();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    setUser(null);
+
+    const timer = setTimeout(() => {
+      setUser(users[userId] || null);
+      setLoading(false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [userId]);
+
+  if (loading) {
+    return (
+      <section className="card">
+        <h1>User Profile</h1>
+        <div className="spinner"></div>
+        <p>Loading user details...</p>
+      </section>
+    );
+  }
+
+  if (!user) {
+    return (
+      <section className="card">
+        <h1>User Not Found</h1>
+        <p>No user exists with ID: {userId}</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="card">
+      <h1>User Profile</h1>
+      <p><strong>User ID:</strong> {userId}</p>
+      <p><strong>Name:</strong> {user.name}</p>
+      <p><strong>Email:</strong> {user.email}</p>
+      <p><strong>Role:</strong> {user.role}</p>
+    </section>
+  );
+}
+
+// 404 page
+function NotFound() {
+  const location = useLocation();
+
+  return (
+    <section className="card">
+      <h1>404 - Page Not Found</h1>
+      <p>No page exists at: {location.pathname}</p>
+      <NavLink to="/">Return Home</NavLink>
+    </section>
+  );
+}
+
+function AppContent() {
+  return (
+    <>
+      <Navbar />
+
+      <main className="container">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+
+          <Route path="/dashboard" element={<DashboardLayout />}>
+            <Route index element={<Counter />} />
+            <Route path="reports" element={<Reports />} />
+          </Route>
+
+          <Route path="/user/:userId" element={<UserProfile />} />
+
+          {/* Redirect example */}
+          <Route path="/home" element={<Navigate to="/" replace />} />
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </BrowserRouter>
+  );
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.app {
+  min-height: 100vh;
+  transition: background 0.25s, color 0.25s;
+}
+
+.light {
+  background: #f3f6fa;
+  color: #222;
+}
+
+.dark {
+  background: #181a1b;
+  color: #f5f5f5;
+}
+
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 16px;
+  background: #174ea6;
+  color: white;
+}
+
+.navbar h2 {
+  margin: 0;
+}
+
+.nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.navbar a,
+.subnav a {
+  color: white;
+  text-decoration: none;
+  padding: 8px 10px;
+  border-radius: 5px;
+}
+
+.navbar a.active {
+  background: #fbbc04;
+  color: #222;
+  font-weight: bold;
+}
+
+.container {
+  width: min(850px, 92%);
+  margin: 30px auto;
+}
+
+.card {
+  padding: 24px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  background: white;
+  color: #222;
+  box-shadow: 0 2px 8px #00000015;
+}
+
+.dark .card {
+  background: #292c2f;
+  color: #f5f5f5;
+}
+
+button {
+  padding: 10px 14px;
+  margin: 5px 0;
+  border: none;
+  border-radius: 5px;
+  background: #1769d2;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #0c4fa8;
+}
+
+.subnav {
+  display: flex;
+  gap: 10px;
+  margin: 15px 0;
+  padding: 10px;
+  background: #174ea6;
+  border-radius: 5px;
+}
+
+.subnav a.active {
+  background: #fbbc04;
+  color: #222;
+}
+
+.clock {
+  font-size: 28px;
+  font-weight: bold;
+  color: #1769d2;
+}
+
+.dark .clock {
+  color: #8ab4f8;
+}
+
+.spinner {
+  width: 35px;
+  height: 35px;
+  border: 4px solid #ddd;
+  border-top-color: #1769d2;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 600px) {
+  .navbar {
+    flex-direction: column;
+  }
+
+  .nav-links {
+    justify-content: center;
+  }
+}
+
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App.jsx";
+
+createRoot(document.getElementById("root")).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);
